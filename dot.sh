@@ -5,8 +5,6 @@ FG_GREEN='\033[32m'
 FG_YELLOW='\033[33m'
 FG_NC='\033[0m'
 
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
-
 #######################################
 # Check if the file is linked correctly.
 # Arguments:
@@ -58,9 +56,11 @@ main() {
     while read -r line; do
         file=$(echo "$line" | awk -F '|' '{print $1}' | xargs)
         exec=$(echo "$line" | awk -F '|' '{print $2}' | xargs)
-        link=${HOME}/.config/${file}
-        link_config "${SCRIPT_DIR}/$file" "$link" "$exec"
-    done <"${SCRIPT_DIR}/list-xdg_config"
+
+        link=${HOME}/.config/$(basename "${file}")
+
+        link_config "${PWD}/$file" "$link" "$exec"
+    done <"${PWD}/list-xdg_config"
 
     while read -r line; do
         file=$(echo "$line" | awk -F '|' '{print $1}' | xargs)
@@ -69,8 +69,8 @@ main() {
         link_file=$(basename "${file}")
         link="${HOME}/.${link_file}"
 
-        link_config "${SCRIPT_DIR}/$file" "$link" "$exec"
-    done <"${SCRIPT_DIR}/list-home"
+        link_config "${PWD}/$file" "$link" "$exec"
+    done <"${PWD}/list-home"
 }
 
 main "$@"
