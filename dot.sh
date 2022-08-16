@@ -30,19 +30,22 @@ check_link() {
 #   exec to check
 #######################################
 link_config() {
-    echo -ne "${FG_GREEN}$3${FG_NC}: $1 ${FG_GREEN}->${FG_NC} $2 : "
+    file="${PWD}/$1"
+    echo -ne "${FG_GREEN}$1${FG_NC}: $file ${FG_GREEN}->${FG_NC} $2 : "
 
-    if ! command -v "$3" > /dev/null; then
-        echo -e "${FG_YELLOW} Ignored${FG_NC}"
-        return
+    if [[ $3 != "" ]]; then
+        if ! command -v "$3" >/dev/null; then
+            echo -e "${FG_YELLOW} Ignored${FG_NC}"
+            return
+        fi
     fi
 
-    if [[ "$(check_link "$1" "$2")" -eq 0 ]]; then
+    if [[ "$(check_link "$file" "$2")" -eq 0 ]]; then
         echo -e "${FG_YELLOW} Linked${FG_NC}"
         return
     fi
 
-    if ln -s "$1" "$2"; then
+    if ln -s "$file" "$2"; then
         echo -e "${FG_GREEN} OK${FG_NC}"
     else
         echo -e "${FG_RED} ERROR${FG_NC}"
@@ -53,24 +56,32 @@ link_config() {
 # Main.
 #######################################
 main() {
-    while read -r line; do
-        file=$(echo "$line" | awk -F '|' '{print $1}' | xargs)
-        exec=$(echo "$line" | awk -F '|' '{print $2}' | xargs)
-
-        link=${HOME}/.config/$(basename "${file}")
-
-        link_config "${PWD}/$file" "$link" "$exec"
-    done <"${PWD}/list-xdg_config"
+    current_mode=none
 
     while read -r line; do
-        file=$(echo "$line" | awk -F '|' '{print $1}' | xargs)
-        exec=$(echo "$line" | awk -F '|' '{print $2}' | xargs)
+        pureline=$(echo "$line" | xargs)
+        if [[ $pureline == "" ]]; then
+            continue
+        elif [[ $pureline == "[xdg]" ]]; then
+            current_mode=xdg
+            continue
+        elif [[ $pureline == "[home]" ]]; then
+            current_mode=home
+            continue
+        fi
 
-        link_file=$(basename "${file}")
-        link="${HOME}/.${link_file}"
+        file=$(echo "$pureline" | awk -F 'exec:' '{print $1}' | xargs)
+        exec=$(echo "$pureline" | awk -F 'exec:' '{print $2}' | xargs)
 
-        link_config "${PWD}/$file" "$link" "$exec"
-    done <"${PWD}/list-home"
+        link=""
+        if [[ $current_mode == "xdg" ]]; then
+            link=${HOME}/.config/$(basename "${file}")
+        elif [[ $current_mode == "home" ]]; then
+            link_file=$(basename "${file}")
+            link="${HOME}/.${link_file}"
+        fi
+        link_config "$file" "$link" "$exec"
+    done <"${PWD}/dot.conf"
 }
 
 main "$@"
